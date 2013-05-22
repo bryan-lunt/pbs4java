@@ -5,11 +5,13 @@
 
 package pbsTorque;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.IOException;
 import java.text.DateFormat;
-import java.util.*;
-
-import java.util.regex.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.TimeZone;
 
 /**
  *
@@ -25,9 +27,9 @@ public class Job {
     private String Name="N/A";
     private String nodes="N/A";
     private String ppn="N/A";
-    private List<String> afterany=new ArrayList<String>();
-    private List<String> afterOK=new ArrayList<String>();
-    private Map<String,String> variables=new HashMap<String, String>();
+    private ArrayList<String> afterany=new ArrayList<String>();
+    private ArrayList<String> afterOK=new ArrayList<String>();
+    private HashMap<String,String> variables=new HashMap<String, String>();
     private String SubmitArgs="N/A";
     private String ctime="N/A";
     private String qtime="N/A";
@@ -47,8 +49,6 @@ public class Job {
     private String errrorPath="N/A";
     private String outputPath="N/A";
     private String VariablesList="N/A";
-
-    private String workingDir=null;
 
     /**
      * 
@@ -86,10 +86,6 @@ public class Job {
                  excuter.append("-l nodes=" +getNodes());
 //</editor-fold>
 
-	   if( workingDir != null && !"".equals(workingDir)){
-		excuter.append("-w "+workingDir);
-	   }
-
             //<editor-fold desc="AfterOK">
                  if (afterOK.size()>0)
                      {
@@ -119,26 +115,12 @@ public class Job {
                     excuter.append("-q " + getQueue() );
             //</editor-fold>
 
-	excuter.append(" -V ");
-
-
-
-
             excuter.append(" " + getExecutableFile());
             String st = excuter.toString();
             //TODO: Remove this in case of Release;
            // System.out.println("Command: "+ st);
 
-
-	String[] envStrings = new String[variables.size()];
-	String[] keys = variables.keySet().toArray(new String[0]);
-	for(int i = 0;i<keys.length;i++){
-		envStrings[i] = "" + keys[i] + "=" + variables.get(keys[i]);
-	}
-
-
-
-            Process p = Runtime.getRuntime().exec(st,envStrings);
+            Process p = Runtime.getRuntime().exec(st);
 
                 p.waitFor();
 
@@ -164,8 +146,8 @@ public class Job {
                 p.getErrorStream().close();
 
                 b.close();
-		id =  new String(data).replaceAll("\n", "");
-		return id;
+                return new String(data).replaceAll("\n", "");
+
             }
 private void analyzeVariableList(String Variables) {
 
@@ -176,20 +158,11 @@ private void analyzeVariableList(String Variables) {
         for (int i=0;i<vars.length;i++)
         {
             couple = vars[i].split("=");
-	    header = couple[0].trim();
-		if(couple.length ==1 ){//Fixes crash for environment Variables that equal nothing or an empty string.
-			value = "";
-			
-		}else{
+            header = couple[0].trim();
             value = couple[1].trim();
-		}
             variables.put(header, value);
         }
     }
-
-
-private static final Pattern JobIDSearchPattern = Pattern.compile("Job Id: (.+)");
-private static final Pattern JobNameSearchPattern = Pattern.compile("Job_Name = (.+)");
 /**
  *
  * @param Name : Name to find
@@ -200,50 +173,44 @@ private static final Pattern JobNameSearchPattern = Pattern.compile("Job_Name = 
  */
     public static String[] SearchJobsByName(String Name, Boolean ExactMatch) throws IOException, InterruptedException
     {
-
-	    
-
         ArrayList<String> FoundJobs= new ArrayList<String>();
-        Process p = Runtime.getRuntime().exec("qstat -f");
+        Process p = Runtime.getRuntime().exec("qstat");
+                p.waitFor();
 
-               BufferedReader ef = new BufferedReader(new InputStreamReader(p.getInputStream()));
-
-	       java.lang.StringBuffer tmpStrBuff = new java.lang.StringBuffer();
-	       char[] tmpBuff = new char[1024];
-	       int bytesread = -1;
-
-	       while((bytesread = ef.read(tmpBuff,0,1024)) != -1){
-			tmpStrBuff.append(tmpBuff,0,bytesread);
-	       }
-
+               BufferedInputStream ef = new BufferedInputStream(p.getInputStream());
+               byte[] data = new byte[ef.available()];
+               ef.read(data, 0, ef.available());
                ef.close();
                p.getOutputStream().close();
                p.getErrorStream().close();
-	  
-	       p.waitFor();
-
-	       String Result = tmpStrBuff.toString();
-               String[] Jobs  = Result.split("\n\n");
-               
-	       for (int i=0; i<Jobs.length; i++)
+               String Result = new String(data);
+               String[] Jobs  = Result.split("\n");
+               String JobName;
+               for (int i=2; i<Jobs.length; i++)
                {
-		  String JID;
-		  String JobName;
 
-		   Matcher JIDM = JobIDSearchPattern.matcher(Jobs[i]);
-		   JIDM.find();
-		   JID = JIDM.group(1).trim();
+                   JobName = Jobs[i].substring(25,Jobs[i].indexOf(" ", 26));
+                   JobName=JobName.trim();
 
-
-		   Matcher JNM = JobNameSearchPattern.matcher(Jobs[i]);
-		   JNM.find();
-		   JobName = JNM.group(1).trim();
-
-
-                   if( (!ExactMatch && JobName.indexOf(Name)>-1) || JobName.equalsIgnoreCase(Name))
+                   if (ExactMatch)
+                   {
+                       if (JobName.equalsIgnoreCase(Name))
                        {
-                           FoundJobs.add(JID);
+                            //System.out.println("Found: " + JobName);
+
+                           FoundJobs.add(Jobs[i].substring(0,Jobs[i].indexOf(" ")));
                        }
+                   }
+                   else 
+                   {
+                       if (JobName.indexOf(Name)>-1)
+                       {
+                            //FoundJobs.add(JobName);
+                           String JID = Jobs[i].substring(0,Jobs[i].indexOf(" "));
+                           FoundJobs.add(JID);
+                           //System.out.println("F: "+ JID);
+                       }
+                   }
                }
                return ((String[]) FoundJobs.toArray(new String[FoundJobs.size()]));
 
@@ -504,16 +471,6 @@ public String toHTMLString()
     sb.append("</html>");
     return sb.toString();
 }
-   public String getWorkdir(){
-	return workingDir;
-   }
-
-
-   public void setWorkdir(String in){
-	   workingDir = in;
-   }
-
-
     /**
      * @return the nodes
      */
@@ -671,14 +628,14 @@ public String toHTMLString()
     /**
      * @return the afterany
      */
-    public List<String> getAfterany() {
+    public ArrayList<String> getAfterany() {
         return afterany;
     }
 
     /**
      * @param afterany the afterany to set
      */
-    public void setAfterany(List<String> afterany) {
+    public void setAfterany(ArrayList<String> afterany) {
         this.setAfterany(afterany);
     }
 
@@ -686,14 +643,14 @@ public String toHTMLString()
     /**
      * @return the afterOK
      */
-    public List<String> getAfterOK() {
+    public ArrayList<String> getAfterOK() {
         return afterOK;
     }
 
     /**
      * @param afterOK the afterOK to set
      */
-    public void setAfterOK(List<String> afterok) {
+    public void setAfterOK(ArrayList<String> afterok) {
         this.afterOK =afterok;
     }
 
@@ -796,11 +753,11 @@ public String toHTMLString()
         this.mtime = mtime;
     }
 
-    public void setVariables(Map<String, String> variables) {
+    public void setVariables(HashMap<String, String> variables) {
         this.variables = variables;
     }
 
-    public Map<String, String> getVariables() {
+    public HashMap<String, String> getVariables() {
         return variables;
     }
     

@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/!svn/ver/16/trunk/pbs4java/src/pbsTorque
+END
+Cluster.java
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/14/trunk/pbs4java/src/pbsTorque/Cluster.java
+END
+Machine.java
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/3/trunk/pbs4java/src/pbsTorque/Machine.java
+END
+Server.java
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/14/trunk/pbs4java/src/pbsTorque/Server.java
+END
+Core.java
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/3/trunk/pbs4java/src/pbsTorque/Core.java
+END
+Job.java
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/!svn/ver/16/trunk/pbs4java/src/pbsTorque/Job.java
+END

@@ -132,8 +132,8 @@ public class Job {
 
 	String[] envStrings = new String[variables.size()];
 	String[] keys = variables.keySet().toArray(new String[0]);
-	for(int i = 0;i<keys.length;i++){
-		envStrings[i] = "" + keys[i] + "=" + variables.get(keys[i]);
+	for(int i = 0;i<varSet.length;i++){
+		envStrings[i] = "" + varSet[i].getKey() + "=" + varSet[i].getValue();
 	}
 
 
